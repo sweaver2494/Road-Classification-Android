@@ -65,18 +65,52 @@ public class DataCollection implements SensorEventListener {
 		accelerom = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
 		dcimDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM);
 	}
+	
+	/*public AudioRecord findAudioRecord() {
+		AUDIO_SOURCE = MediaRecorder.AudioSource.DEFAULT;
+	    for (int rate : mSampleRates) {
+	        for (short audioFormat : new short[] { AudioFormat.ENCODING_PCM_8BIT, AudioFormat.ENCODING_PCM_16BIT }) {
+	            for (short channelConfig : new short[] { AudioFormat.CHANNEL_IN_MONO, AudioFormat.CHANNEL_IN_STEREO }) {
+	                try {
+	                    System.out.println("Attempting rate " + rate + "Hz, bits: " + audioFormat + ", channel: " + channelConfig);
+	                    int bufferSize = AudioRecord.getMinBufferSize(rate, channelConfig, audioFormat);
 
-	private AudioRecord getAudioRecorder() {
+	                    if (bufferSize != AudioRecord.ERROR_BAD_VALUE) {
+	                        // check if we can instantiate and have a success
+	                        AudioRecord recorder = new AudioRecord(AUDIO_SOURCE, rate, channelConfig, audioFormat, bufferSize);
+
+	                        if (recorder.getState() == AudioRecord.STATE_INITIALIZED) {
+	                        	SAMPLING_RATE = rate;
+	                        	CHANNEL_IN_CONFIG = channelConfig;
+	                        	AUDIO_FORMAT = audioFormat;
+	                        	BUFFER_SIZE = bufferSize;
+	                            return recorder;
+	                        }
+	                    }
+	                } catch (Exception e) {
+	                    System.out.println("Uninitialized, trying again...");
+	                }
+	            }
+	        }
+	    }
+	    return null;
+	}*/
+
+	private AudioRecord getAudioRecord() {
 		try {
 			AUDIO_SOURCE = MediaRecorder.AudioSource.DEFAULT; // 0
 			SAMPLING_RATE = mSampleRates[0]; // 44100
 			CHANNEL_IN_CONFIG = AudioFormat.CHANNEL_IN_MONO; // 16
 			AUDIO_FORMAT = AudioFormat.ENCODING_PCM_16BIT; // 2
 			BUFFER_SIZE = AudioRecord.getMinBufferSize(SAMPLING_RATE, CHANNEL_IN_CONFIG, AUDIO_FORMAT);
-			AudioRecord localAudioRecord = new AudioRecord(AUDIO_SOURCE, SAMPLING_RATE, CHANNEL_IN_CONFIG, AUDIO_FORMAT, BUFFER_SIZE);
-			return localAudioRecord;
+			AudioRecord audioRecord = new AudioRecord(AUDIO_SOURCE, SAMPLING_RATE, CHANNEL_IN_CONFIG, AUDIO_FORMAT, BUFFER_SIZE);
+			
+			if (audioRecord.getState() == AudioRecord.STATE_INITIALIZED) {
+				System.out.println("Audio Record Initialized");
+				return audioRecord;
+			}
 		} catch (Exception e) {
-			System.err.println(e.toString());
+			System.err.println("Could not get audio recorder. " + e.toString());
 		}
 		return null;
 	}
@@ -85,25 +119,23 @@ public class DataCollection implements SensorEventListener {
 		int numShorts = BUFFER_SIZE / 2;
 		short[] audioArray = new short[numShorts];
 		try {
-			if (!isRecording) {
-				return;
-			}
-			long endTime = System.nanoTime();
-			long tempStartTime = startTime;
-			audiorec.read(audioArray, 0, numShorts);
-
-			int audioArrayLength = audioArray.length;
-			for (int i = 0; i < audioArrayLength; i++) {
-				int audioReading = audioArray[i];
-				audiobw.write("audio,"
-						+ String.valueOf(endTime - tempStartTime) + ","
-						+ String.valueOf(audioReading));
-				audiobw.newLine();
+			while (isRecording) {
+				long endTime = System.nanoTime();
+				long tempStartTime = startTime;
+				audiorec.read(audioArray, 0, numShorts);
+	
+				int audioArrayLength = audioArray.length;
+				for (int i = 0; i < audioArrayLength; i++) {
+					int audioReading = audioArray[i];
+					audiobw.write("audio,"
+							+ String.valueOf(endTime - tempStartTime) + ","
+							+ String.valueOf(audioReading));
+					audiobw.newLine();
+				}
 				audiobw.flush();
 			}
-			return;
 		} catch (IOException e) {
-			System.err.println("Cannot Write Audio Data File.");
+			System.err.println("Cannot write audio data file. " + e.toString());
 		}
 	}
 
@@ -119,21 +151,19 @@ public class DataCollection implements SensorEventListener {
 			sensorFilePath = (classificationDirPath + classification + "_0_sensor.csv");
 			audioFilePath = (classificationDirPath + classification + "_0_audio.csv");
 			dataFilePath = (classificationDirPath + classification + "_0.csv");
-			while (!(new File(sensorFilePath).exists())
-					|| !(new File(audioFilePath).exists())
-					|| !(new File(dataFilePath).exists())) {
+			while ((new File(sensorFilePath).exists()) || (new File(audioFilePath).exists()) || (new File(dataFilePath).exists())) {
 				sensorFilePath = (classificationDirPath + classification + "_" + i + "_sensor.csv");
 				audioFilePath = (classificationDirPath + classification + "_" + i + "_audio.csv");
 				dataFilePath = (classificationDirPath + classification + "_" + i + ".csv");
 				i++;
-				if (i == 100) {
+				if (i == 100000) {
 					success = false;
 					break; // Escape just in case file path is incorrect. don't run in infinite loop.
 				}
 			}
 
 			System.out.println("Sensor Path " + sensorFilePath);
-			System.out.println("Audio Path " + sensorFilePath);
+			System.out.println("Audio Path " + audioFilePath);
 			System.out.println("Data Path " + dataFilePath);
 
 			if (success) {
@@ -142,7 +172,7 @@ public class DataCollection implements SensorEventListener {
 					audiobw = new BufferedWriter(new FileWriter(audioFilePath,true));
 					databw = new BufferedWriter(new FileWriter(dataFilePath,true));
 				} catch (IOException e) {
-					System.err.println("Could not write to data file.");
+					System.err.println("Could not open data file. " + e.toString());
 					success = false;
 				}
 			}
@@ -158,7 +188,7 @@ public class DataCollection implements SensorEventListener {
 			}
 
 			if (success) {
-				audiorec = getAudioRecorder();
+				audiorec = getAudioRecord();
 				if (audiorec != null) {
 					audiorec.startRecording();
 					isRecording = true;
@@ -192,14 +222,11 @@ public class DataCollection implements SensorEventListener {
 				audiorec.stop();
 				audiorec.release();
 			}
+			
 			try {
 				audioThread.join();
 				audioThread = null;
-			} catch (InterruptedException e) {
-				System.err.println("Could not join audio thread.");
-			}
-
-			try {
+				
 				BufferedReader sensorbr = new BufferedReader(new InputStreamReader(new FileInputStream(sensorFilePath)));
 				BufferedReader audiobr = new BufferedReader(new InputStreamReader(new FileInputStream(audioFilePath)));
 				databw.write(classification);
@@ -210,39 +237,41 @@ public class DataCollection implements SensorEventListener {
 				while (line != null) {
 					databw.write(line);
 					databw.newLine();
-					databw.flush();
 
 					line = sensorbr.readLine();
 				}
+				databw.flush();
 
 				line = audiobr.readLine();
 				while (line != null) {
 					databw.write(line);
 					databw.newLine();
-					databw.flush();
 
 					line = audiobr.readLine();
 				}
+				databw.flush();
 
 				sensorbr.close();
 				audiobr.close();
 				if ((new File(dataFilePath)).isFile()) {
 					(new File(sensorFilePath)).delete();
-					(new File(audioFilePath)).delete();
+					//(new File(audioFilePath)).delete();
 				}
 
 				isStarted = false;
 
 				success = true;
 			} catch (IOException e) {
+				System.err.println("Cannot write data file. " + e.toString());
+			} catch (InterruptedException e) {
+				System.err.println("Could not join audio thread. " + e.toString());
+			} finally {
 				try {
 					sensorbw.close();
 					audiobw.close();
 					databw.close();
-
-					System.err.println("Cannot write data file.");
 				} catch (IOException e2) {
-					System.err.println("Cannot close data file.");
+					System.err.println("Cannot close data file. " + e2.toString());
 				}
 			}
 		}
@@ -258,7 +287,7 @@ public class DataCollection implements SensorEventListener {
 	}
 
 	public void onSensorChanged(SensorEvent sensorEvent) {
-		String sensor = sensorEvent.sensor.toString();
+		String sensor = sensorEvent.sensor.getStringType();
 		long elapsedTime = System.nanoTime() - startTime;
 		try {
 			sensorbw.write(sensor.substring(sensor.lastIndexOf(".") + 1)
@@ -276,7 +305,7 @@ public class DataCollection implements SensorEventListener {
 			sensorbw.flush();
 			return;
 		} catch (IOException e) {
-			System.err.println("Cannot Write Sensor Data File.");
+			System.err.println("Cannot write sensor data file. " + e.toString());
 		}
 	}
 }

@@ -93,6 +93,8 @@ public class MainActivity extends Activity {
 				}
 			}
 		});
+		
+		//START BUTTON
 		((Button) findViewById(R.id.startButton)).setOnClickListener(new View.OnClickListener() {
 			public void onClick(View paramAnonymousView) {
 				if (collection.StartCollection()) {
@@ -101,6 +103,10 @@ public class MainActivity extends Activity {
 
 					String filePath = "Data File: " + collection.getDataFilePath();
 					System.out.println(filePath);
+					
+					Intent intent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
+					intent.setData(Uri.fromFile(new File(collection.getDataFilePath())));
+					sendBroadcast(intent);
 				}
 			}
 		});
