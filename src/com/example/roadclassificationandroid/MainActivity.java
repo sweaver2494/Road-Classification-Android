@@ -15,41 +15,41 @@ import android.widget.Chronometer;
 import android.widget.EditText;
 
 public class MainActivity extends Activity {
-	
+
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 
 		final DataCollection collection = new DataCollection(this);
-		
+
 		((Button) findViewById(R.id.stopButton))
-				.setOnClickListener(new View.OnClickListener() {
-					public void onClick(View v) {
-						if (collection.StopCollection()) {
-							((Chronometer) findViewById(R.id.chronometer)).stop();
-							
-							String filePath = "Data File: " + collection.getDataFilePath();
-							((EditText) findViewById(R.id.classificationText)).setText(filePath);
-							
-							Intent intent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
-							intent.setData(Uri.fromFile(new File(collection.getDataFilePath())));
-							sendBroadcast(intent);
-						}
-					}
-				});
+		.setOnClickListener(new View.OnClickListener() {
+			public void onClick(View v) {
+				if (collection.StopCollection()) {
+					((Chronometer) findViewById(R.id.chronometer)).stop();
+
+					String filePath = "Data File: "+ collection.getDataFilePath();
+					((EditText) findViewById(R.id.classificationText)).setText(filePath);
+
+					Intent intent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
+					intent.setData(Uri.fromFile(new File(collection.getDataFilePath())));
+					sendBroadcast(intent);
+				}
+			}
+		});
 		((Button) findViewById(R.id.startButton))
-				.setOnClickListener(new View.OnClickListener() {
-					public void onClick(View paramAnonymousView) {
-						if (collection.StartCollection()) {
-							((Chronometer) findViewById(R.id.chronometer)).setBase(SystemClock.elapsedRealtime());
-							((Chronometer) findViewById(R.id.chronometer)).start();
-						
-							String filePath = "Data File: " + collection.getDataFilePath();
-							((EditText) findViewById(R.id.classificationText)).setText(filePath);
-						}
-					}
-				});
+		.setOnClickListener(new View.OnClickListener() {
+			public void onClick(View paramAnonymousView) {
+				if (collection.StartCollection()) {
+					((Chronometer) findViewById(R.id.chronometer)).setBase(SystemClock.elapsedRealtime());
+					((Chronometer) findViewById(R.id.chronometer)).start();
+
+					String filePath = "Data File: " + collection.getDataFilePath();
+					((EditText) findViewById(R.id.classificationText)).setText(filePath);
+				}
+			}
+		});
 	}
 
 	@Override

@@ -63,8 +63,7 @@ public class DataCollection implements SensorEventListener {
 		sensorManager = (SensorManager) currentActivity.getSystemService(Context.SENSOR_SERVICE);
 		gyroscope = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
 		accelerom = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-		dcimDir = Environment
-				.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM);
+		dcimDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM);
 	}
 
 	private AudioRecord getAudioRecorder() {
@@ -112,9 +111,7 @@ public class DataCollection implements SensorEventListener {
 		boolean success = true;
 
 		if (!isStarted) {
-			classification = ((EditText) currentActivity
-					.findViewById(R.id.classificationText)).getText()
-					.toString();
+			classification = ((EditText) currentActivity.findViewById(R.id.classificationText)).getText().toString();
 			classificationDirPath = (dcimDir.getAbsolutePath() + "/Classification/");
 			(new File(classificationDirPath)).mkdirs();
 
@@ -125,17 +122,13 @@ public class DataCollection implements SensorEventListener {
 			while (!(new File(sensorFilePath).exists())
 					|| !(new File(audioFilePath).exists())
 					|| !(new File(dataFilePath).exists())) {
-				sensorFilePath = (classificationDirPath + classification + "_"
-						+ i + "_sensor.csv");
-				audioFilePath = (classificationDirPath + classification + "_"
-						+ i + "_audio.csv");
-				dataFilePath = (classificationDirPath + classification + "_"
-						+ i + ".csv");
+				sensorFilePath = (classificationDirPath + classification + "_" + i + "_sensor.csv");
+				audioFilePath = (classificationDirPath + classification + "_" + i + "_audio.csv");
+				dataFilePath = (classificationDirPath + classification + "_" + i + ".csv");
 				i++;
 				if (i == 100) {
 					success = false;
-					break; // Escape just in case file path is incorrect. don't
-							// run in infinite loop.
+					break; // Escape just in case file path is incorrect. don't run in infinite loop.
 				}
 			}
 
@@ -145,12 +138,9 @@ public class DataCollection implements SensorEventListener {
 
 			if (success) {
 				try {
-					sensorbw = new BufferedWriter(new FileWriter(
-							sensorFilePath, true));
-					audiobw = new BufferedWriter(new FileWriter(audioFilePath,
-							true));
-					databw = new BufferedWriter(new FileWriter(dataFilePath,
-							true));
+					sensorbw = new BufferedWriter(new FileWriter(sensorFilePath, true));
+					audiobw = new BufferedWriter(new FileWriter(audioFilePath,true));
+					databw = new BufferedWriter(new FileWriter(dataFilePath,true));
 				} catch (IOException e) {
 					System.err.println("Could not write to data file.");
 					success = false;
@@ -160,13 +150,11 @@ public class DataCollection implements SensorEventListener {
 			startTime = System.nanoTime();
 
 			if (success) {
-				success = sensorManager.registerListener(this, gyroscope,
-						SensorManager.SENSOR_DELAY_FASTEST);
+				success = sensorManager.registerListener(this, gyroscope,SensorManager.SENSOR_DELAY_FASTEST);
 			}
 
 			if (success) {
-				success = sensorManager.registerListener(this, accelerom,
-						SensorManager.SENSOR_DELAY_FASTEST);
+				success = sensorManager.registerListener(this, accelerom,SensorManager.SENSOR_DELAY_FASTEST);
 			}
 
 			if (success) {
@@ -212,12 +200,8 @@ public class DataCollection implements SensorEventListener {
 			}
 
 			try {
-				BufferedReader sensorbr = new BufferedReader(
-						new InputStreamReader(new FileInputStream(
-								sensorFilePath)));
-				BufferedReader audiobr = new BufferedReader(
-						new InputStreamReader(
-								new FileInputStream(audioFilePath)));
+				BufferedReader sensorbr = new BufferedReader(new InputStreamReader(new FileInputStream(sensorFilePath)));
+				BufferedReader audiobr = new BufferedReader(new InputStreamReader(new FileInputStream(audioFilePath)));
 				databw.write(classification);
 				databw.newLine();
 				databw.flush();
@@ -247,15 +231,18 @@ public class DataCollection implements SensorEventListener {
 					(new File(audioFilePath)).delete();
 				}
 
+				isStarted = false;
+
 				success = true;
 			} catch (IOException e) {
 				try {
 					sensorbw.close();
 					audiobw.close();
 					databw.close();
-					isStarted = false;
+
 					System.err.println("Cannot write data file.");
 				} catch (IOException e2) {
+					System.err.println("Cannot close data file.");
 				}
 			}
 		}
