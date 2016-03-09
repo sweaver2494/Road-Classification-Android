@@ -1,6 +1,7 @@
 package com.example.roadclassificationandroid;
 
 import java.io.File;
+import java.util.ArrayList;
 
 import android.app.Activity;
 import android.content.Intent;
@@ -10,27 +11,81 @@ import android.os.SystemClock;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.Chronometer;
 import android.widget.EditText;
+import android.widget.Spinner;
 
 public class MainActivity extends Activity {
 
+	String condition = "";
+	String speed = "";
+	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 
 		final DataCollection collection = new DataCollection(this);
+		final EditText classificationText = (EditText) findViewById(R.id.classificationText);
+		
 
-		((Button) findViewById(R.id.stopButton))
-		.setOnClickListener(new View.OnClickListener() {
+		//CONDITION DROP DOWN
+		ArrayList<String> conditions = new ArrayList<String>();
+		conditions.add("asphalt_bad");
+		conditions.add("asphalt_good");
+		conditions.add("bumps_left");
+		conditions.add("bumps_right");
+		conditions.add("concrete");
+		conditions.add("dirt");
+		conditions.add("gravel");
+		ArrayAdapter<String> conditionAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, conditions);
+		conditionAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+		Spinner conditionSpinner = (Spinner) findViewById(R.id.conditionSpinner);
+		conditionSpinner.setAdapter(conditionAdapter);
+		conditionSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+			public void onItemSelected(AdapterView<?> parent, View view, int pos, long id) {
+				condition = parent.getItemAtPosition(pos).toString();
+			    classificationText.setText(condition + "_" + speed);
+			}
+			
+			public void onNothingSelected(AdapterView<?> parent) {
+				condition = "";
+			    classificationText.setText(condition + "_" + speed);
+			}
+		});
+		
+		//SPEED DROP DOWN
+		ArrayList<String> speeds = new ArrayList<String>();
+		speeds.add("25");
+		speeds.add("45");
+		speeds.add("65");
+		ArrayAdapter<String> speedAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, speeds);
+		speedAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+		Spinner speedSpinner = (Spinner) findViewById(R.id.speedSpinner);
+		speedSpinner.setAdapter(speedAdapter);
+		speedSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+			public void onItemSelected(AdapterView<?> parent, View view, int pos, long id) {
+				speed = parent.getItemAtPosition(pos).toString();
+			    classificationText.setText(condition + "_" + speed);
+			}
+			
+			public void onNothingSelected(AdapterView<?> parent) {
+				speed = "";
+			    classificationText.setText(condition + "_" + speed);
+			}
+		});
+		
+		//STOP BUTTON
+		((Button) findViewById(R.id.stopButton)).setOnClickListener(new View.OnClickListener() {
 			public void onClick(View v) {
 				if (collection.StopCollection()) {
 					((Chronometer) findViewById(R.id.chronometer)).stop();
 
-					String filePath = "Data File: "+ collection.getDataFilePath();
-					((EditText) findViewById(R.id.classificationText)).setText(filePath);
+					String filePath = "Data File: " + collection.getDataFilePath();
+					System.out.println(filePath);
 
 					Intent intent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
 					intent.setData(Uri.fromFile(new File(collection.getDataFilePath())));
@@ -38,15 +93,14 @@ public class MainActivity extends Activity {
 				}
 			}
 		});
-		((Button) findViewById(R.id.startButton))
-		.setOnClickListener(new View.OnClickListener() {
+		((Button) findViewById(R.id.startButton)).setOnClickListener(new View.OnClickListener() {
 			public void onClick(View paramAnonymousView) {
 				if (collection.StartCollection()) {
 					((Chronometer) findViewById(R.id.chronometer)).setBase(SystemClock.elapsedRealtime());
 					((Chronometer) findViewById(R.id.chronometer)).start();
 
 					String filePath = "Data File: " + collection.getDataFilePath();
-					((EditText) findViewById(R.id.classificationText)).setText(filePath);
+					System.out.println(filePath);
 				}
 			}
 		});
