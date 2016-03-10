@@ -1,3 +1,7 @@
+/*
+ *
+ * @author Scott Weaver
+ */
 package com.example.roadclassificationandroid;
 
 import java.io.File;
