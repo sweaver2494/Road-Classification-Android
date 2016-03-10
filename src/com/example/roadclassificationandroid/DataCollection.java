@@ -255,7 +255,7 @@ public class DataCollection implements SensorEventListener {
 				audiobr.close();
 				if ((new File(dataFilePath)).isFile()) {
 					(new File(sensorFilePath)).delete();
-					//(new File(audioFilePath)).delete();
+					(new File(audioFilePath)).delete();
 				}
 
 				isStarted = false;
