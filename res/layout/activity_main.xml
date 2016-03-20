@@ -40,7 +40,7 @@
         android:layout_centerHorizontal="true"
         android:layout_marginBottom="40dp"
         android:ems="10"
-        android:inputType="textPostalAddress" />
+        android:inputType="text" />
 
     <Spinner
         android:id="@+id/conditionSpinner"
@@ -55,5 +55,15 @@
         android:layout_height="wrap_content"
         android:layout_below="@+id/conditionSpinner"
         android:layout_centerHorizontal="true" />
+
+    <EditText
+        android:id="@+id/filenameText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_above="@+id/classificationText"
+        android:layout_centerHorizontal="true"
+        android:layout_marginBottom="15dp"
+        android:ems="10"
+        android:inputType="none" />
 
 </RelativeLayout>

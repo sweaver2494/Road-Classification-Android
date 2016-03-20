@@ -38,8 +38,8 @@ public class MainActivity extends Activity {
 
 		//CONDITION DROP DOWN
 		ArrayList<String> conditions = new ArrayList<String>();
-		conditions.add("asphalt_bad");
-		conditions.add("asphalt_good");
+		conditions.add("asphalt_rough");
+		conditions.add("asphalt_smooth");
 		conditions.add("bumps_left");
 		conditions.add("bumps_right");
 		conditions.add("concrete");
@@ -63,9 +63,8 @@ public class MainActivity extends Activity {
 		
 		//SPEED DROP DOWN
 		ArrayList<String> speeds = new ArrayList<String>();
-		speeds.add("25");
-		speeds.add("45");
-		speeds.add("65");
+		speeds.add("30");
+		speeds.add("60");
 		ArrayAdapter<String> speedAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, speeds);
 		speedAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
 		Spinner speedSpinner = (Spinner) findViewById(R.id.speedSpinner);
@@ -88,9 +87,6 @@ public class MainActivity extends Activity {
 				if (collection.StopCollection()) {
 					((Chronometer) findViewById(R.id.chronometer)).stop();
 
-					String filePath = "Data File: " + collection.getDataFilePath();
-					System.out.println(filePath);
-
 					Intent intent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
 					intent.setData(Uri.fromFile(new File(collection.getDataFilePath())));
 					sendBroadcast(intent);
@@ -105,8 +101,9 @@ public class MainActivity extends Activity {
 					((Chronometer) findViewById(R.id.chronometer)).setBase(SystemClock.elapsedRealtime());
 					((Chronometer) findViewById(R.id.chronometer)).start();
 
-					String filePath = "Data File: " + collection.getDataFilePath();
-					System.out.println(filePath);
+					String filePath = collection.getDataFilePath();
+					System.out.println("Data File: " + filePath);
+					((EditText) findViewById(R.id.filenameText)).setText(filePath);
 					
 					Intent intent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
 					intent.setData(Uri.fromFile(new File(collection.getDataFilePath())));
