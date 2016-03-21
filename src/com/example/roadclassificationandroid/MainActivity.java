@@ -38,13 +38,10 @@ public class MainActivity extends Activity {
 
 		//CONDITION DROP DOWN
 		ArrayList<String> conditions = new ArrayList<String>();
-		conditions.add("asphalt_rough");
-		conditions.add("asphalt_smooth");
+		conditions.add("paved");
+		conditions.add("unpaved");
 		conditions.add("bumps_left");
 		conditions.add("bumps_right");
-		conditions.add("concrete");
-		conditions.add("dirt");
-		conditions.add("gravel");
 		ArrayAdapter<String> conditionAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, conditions);
 		conditionAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
 		Spinner conditionSpinner = (Spinner) findViewById(R.id.conditionSpinner);
