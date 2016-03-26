@@ -11,6 +11,7 @@ import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
 
 import android.app.Activity;
 import android.content.Context;
@@ -22,7 +23,6 @@ import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
 import android.os.Environment;
-import android.widget.EditText;
 
 public class DataCollection implements SensorEventListener {
 
@@ -52,13 +52,20 @@ public class DataCollection implements SensorEventListener {
 	// File Handling
 	private BufferedWriter sensorbw = null;
 	private BufferedWriter audiobw = null;
-	private BufferedWriter databw = null;
+	private BufferedWriter testDataBw = null;
 
 	private File dcimDir = null;
 	private String classification = "";
-	private String classificationDirPath = "";
+	private String testDataDir = "";
 	private String sensorFilePath = "";
-	private String dataFilePath = "";
+	private String testDataPath = "";
+	private String featureDataPath = "";
+	
+	private ArrayList<double[]> trainingData;
+	private ArrayList<String> trainingClassification;
+	private ArrayList<String> trainingColumnHeaders;
+	
+	int k_value = 2;
 
 	private Activity currentActivity;
 
@@ -147,34 +154,24 @@ public class DataCollection implements SensorEventListener {
 		boolean success = true;
 
 		if (!isStarted) {
-			classification = ((EditText) currentActivity.findViewById(R.id.classificationText)).getText().toString();
-			classificationDirPath = (dcimDir.getAbsolutePath() + "/Classification/");
-			(new File(classificationDirPath)).mkdirs();
+			testDataDir = (dcimDir.getAbsolutePath() + "/Classification/");
+			(new File(testDataDir)).mkdirs();
 
-			int i = 1;
-			sensorFilePath = (classificationDirPath + classification + "_0_sensor.csv");
-			audioFilePath = (classificationDirPath + classification + "_0_audio.csv");
-			dataFilePath = (classificationDirPath + classification + "_0.csv");
-			while ((new File(sensorFilePath).exists()) || (new File(audioFilePath).exists()) || (new File(dataFilePath).exists())) {
-				sensorFilePath = (classificationDirPath + classification + "_" + i + "_sensor.csv");
-				audioFilePath = (classificationDirPath + classification + "_" + i + "_audio.csv");
-				dataFilePath = (classificationDirPath + classification + "_" + i + ".csv");
-				i++;
-				if (i == 100000) {
-					success = false;
-					break; // Escape just in case file path is incorrect. don't run in infinite loop.
-				}
-			}
+			sensorFilePath = (testDataDir + "test_sensor.csv");
+			audioFilePath = (testDataDir + "test_audio.csv");
+			testDataPath = (testDataDir + "test.csv");
+			featureDataPath = (testDataDir + "test_features.csv");
 
 			System.out.println("Sensor Path " + sensorFilePath);
 			System.out.println("Audio Path " + audioFilePath);
-			System.out.println("Data Path " + dataFilePath);
+			System.out.println("Test Data Path " + testDataPath);
+			System.out.println("Test Feature Path " + featureDataPath);
 
 			if (success) {
 				try {
-					sensorbw = new BufferedWriter(new FileWriter(sensorFilePath, true));
-					audiobw = new BufferedWriter(new FileWriter(audioFilePath,true));
-					databw = new BufferedWriter(new FileWriter(dataFilePath,true));
+					sensorbw = new BufferedWriter(new FileWriter(sensorFilePath, false));
+					audiobw = new BufferedWriter(new FileWriter(audioFilePath, false));
+					testDataBw = new BufferedWriter(new FileWriter(testDataPath, false));
 				} catch (IOException e) {
 					System.err.println("Could not open data file. " + e.toString());
 					success = false;
@@ -233,38 +230,38 @@ public class DataCollection implements SensorEventListener {
 				
 				BufferedReader sensorbr = new BufferedReader(new InputStreamReader(new FileInputStream(sensorFilePath)));
 				BufferedReader audiobr = new BufferedReader(new InputStreamReader(new FileInputStream(audioFilePath)));
-				databw.write(classification);
-				databw.newLine();
-				databw.flush();
+				testDataBw.write("unkown");
+				testDataBw.newLine();
+				testDataBw.flush();
 
 				String line = sensorbr.readLine();
 				while (line != null) {
-					databw.write(line);
-					databw.newLine();
+					testDataBw.write(line);
+					testDataBw.newLine();
 
 					line = sensorbr.readLine();
 				}
-				databw.flush();
+				testDataBw.flush();
 
 				line = audiobr.readLine();
 				while (line != null) {
-					databw.write(line);
-					databw.newLine();
+					testDataBw.write(line);
+					testDataBw.newLine();
 
 					line = audiobr.readLine();
 				}
-				databw.flush();
+				testDataBw.flush();
 
 				sensorbr.close();
 				audiobr.close();
-				if ((new File(dataFilePath)).isFile()) {
+				if ((new File(testDataPath)).isFile()) {
 					(new File(sensorFilePath)).delete();
 					(new File(audioFilePath)).delete();
 				}
 
 				isStarted = false;
 
-				success = true;
+				predictClassification();
 			} catch (IOException e) {
 				System.err.println("Cannot write data file. " + e.toString());
 			} catch (InterruptedException e) {
@@ -273,7 +270,7 @@ public class DataCollection implements SensorEventListener {
 				try {
 					sensorbw.close();
 					audiobw.close();
-					databw.close();
+					testDataBw.close();
 				} catch (IOException e2) {
 					System.err.println("Cannot close data file. " + e2.toString());
 				}
@@ -283,8 +280,42 @@ public class DataCollection implements SensorEventListener {
 		return success;
 	}
 
-	public String getDataFilePath() {
-		return dataFilePath;
+	public String getClassification() {
+		return classification;
+	}
+	
+	public void setTrainingData(ArrayList<double[]> data, ArrayList<String> classif, ArrayList<String> colHeaders) {
+		trainingData = data;
+		trainingClassification = classif;
+		trainingColumnHeaders = colHeaders;
+	}
+	
+	private String predictClassification() {
+		
+		ArrayList<double[]> testData = new ArrayList<double[]>(1);
+		ArrayList<String> testClassification = new ArrayList<String>();
+		ArrayList<String> testColumnHeaders = new ArrayList<String>();
+		
+		//Convert raw data to feature file
+		FileUtilities.createTestData(testDataPath, featureDataPath);
+		//Extract features from feature file
+		FileUtilities.readFeatureFile(featureDataPath, testData, testClassification, testColumnHeaders);
+		
+		//double[] orderedTestDataArr = new double[testData.get(0).length];
+		ArrayList<double[]> orderedTestData = new ArrayList<double[]>(1);
+		
+		for (String header : trainingColumnHeaders) {
+			for (int i = 0; i < testColumnHeaders.size(); i++) {
+				if (testColumnHeaders.get(i).equals(header)) {
+					orderedTestData.add(testData.get(i));
+				}
+			}
+		}
+		
+		ArrayList<DistObj> distObjects = KnnUtilities.performKNN(trainingData, orderedTestData.get(0));
+		classification = KnnUtilities.getPredictedClassification(distObjects, trainingClassification, k_value);
+		
+		return classification;
 	}
 
 	public void onAccuracyChanged(Sensor paramSensor, int paramInt) {

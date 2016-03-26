@@ -4,13 +4,12 @@
  */
 package com.example.roadclassificationandroid;
 
-import java.io.File;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 import android.app.Activity;
-import android.content.Intent;
-import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.SystemClock;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -25,7 +24,9 @@ import android.widget.Spinner;
 public class MainActivity extends Activity {
 
 	String condition = "";
-	String speed = "";
+	String trainingFileName = "";
+	boolean stopped = false;
+	long timeInterval = (long) 0.5;
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -33,15 +34,16 @@ public class MainActivity extends Activity {
 		setContentView(R.layout.activity_main);
 
 		final DataCollection collection = new DataCollection(this);
-		final EditText classificationText = (EditText) findViewById(R.id.classificationText);
 		
+		String trainingDataDirPath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM).getAbsolutePath() + "/Classification/";
+		final HashMap<String, String> fileNameMap = new HashMap<String, String>();
+		fileNameMap.put("paved_vs_unpaved", trainingDataDirPath + "training_data_30.csv");
+		fileNameMap.put("30mph_vs_60mph", trainingDataDirPath + "training_data_paved.csv");
 
 		//CONDITION DROP DOWN
 		ArrayList<String> conditions = new ArrayList<String>();
-		conditions.add("paved");
-		conditions.add("unpaved");
-		conditions.add("bumps_left");
-		conditions.add("bumps_right");
+		conditions.add("paved_vs_unpaved");
+		conditions.add("30mph_vs_60mph");
 		ArrayAdapter<String> conditionAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, conditions);
 		conditionAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
 		Spinner conditionSpinner = (Spinner) findViewById(R.id.conditionSpinner);
@@ -49,62 +51,58 @@ public class MainActivity extends Activity {
 		conditionSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
 			public void onItemSelected(AdapterView<?> parent, View view, int pos, long id) {
 				condition = parent.getItemAtPosition(pos).toString();
-			    classificationText.setText(condition + "_" + speed);
+				trainingFileName = fileNameMap.get(condition);
 			}
 			
 			public void onNothingSelected(AdapterView<?> parent) {
 				condition = "";
-			    classificationText.setText(condition + "_" + speed);
-			}
-		});
-		
-		//SPEED DROP DOWN
-		ArrayList<String> speeds = new ArrayList<String>();
-		speeds.add("30");
-		speeds.add("60");
-		ArrayAdapter<String> speedAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, speeds);
-		speedAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-		Spinner speedSpinner = (Spinner) findViewById(R.id.speedSpinner);
-		speedSpinner.setAdapter(speedAdapter);
-		speedSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-			public void onItemSelected(AdapterView<?> parent, View view, int pos, long id) {
-				speed = parent.getItemAtPosition(pos).toString();
-			    classificationText.setText(condition + "_" + speed);
-			}
-			
-			public void onNothingSelected(AdapterView<?> parent) {
-				speed = "";
-			    classificationText.setText(condition + "_" + speed);
 			}
 		});
 		
 		//STOP BUTTON
 		((Button) findViewById(R.id.stopButton)).setOnClickListener(new View.OnClickListener() {
 			public void onClick(View v) {
-				if (collection.StopCollection()) {
-					((Chronometer) findViewById(R.id.chronometer)).stop();
-
-					Intent intent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
-					intent.setData(Uri.fromFile(new File(collection.getDataFilePath())));
-					sendBroadcast(intent);
-				}
+				collection.StopCollection();
+				stopped = true;
+				((Chronometer) findViewById(R.id.chronometer)).stop();
 			}
 		});
 		
 		//START BUTTON
 		((Button) findViewById(R.id.startButton)).setOnClickListener(new View.OnClickListener() {
 			public void onClick(View paramAnonymousView) {
+				
+				ArrayList<double[]> trainingData = new ArrayList<double[]>();
+				ArrayList<String> trainingClassification = new ArrayList<String>();
+				ArrayList<String> trainingColumnHeaders = new ArrayList<String>();
+				
+				FileUtilities.readFeatureFile(trainingFileName, trainingData, trainingClassification, trainingColumnHeaders);
+				collection.setTrainingData(trainingData, trainingClassification, trainingColumnHeaders);
+				
+				long startTime = SystemClock.elapsedRealtime();
+				
 				if (collection.StartCollection()) {
-					((Chronometer) findViewById(R.id.chronometer)).setBase(SystemClock.elapsedRealtime());
+					((Chronometer) findViewById(R.id.chronometer)).setBase(startTime);
 					((Chronometer) findViewById(R.id.chronometer)).start();
-
-					String filePath = collection.getDataFilePath();
-					System.out.println("Data File: " + filePath);
-					((EditText) findViewById(R.id.filenameText)).setText(filePath);
-					
-					Intent intent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
-					intent.setData(Uri.fromFile(new File(collection.getDataFilePath())));
-					sendBroadcast(intent);
+				}
+				
+				while (!stopped) {
+					if (SystemClock.elapsedRealtime() > (startTime + timeInterval)) {
+						if (!collection.StopCollection()) {
+							stopped = true;
+						}
+						
+						String predictedClassification = collection.getClassification();
+						System.out.println("Predicted Classification: " + predictedClassification);
+						((EditText) findViewById(R.id.classificationText)).setText(predictedClassification);
+						
+						startTime = SystemClock.elapsedRealtime();
+						if (!stopped) {
+							if (!collection.StartCollection()) {
+								stopped = true;
+							}
+						}
+					}
 				}
 			}
 		});
